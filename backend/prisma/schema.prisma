@@ -1,0 +1,186 @@
+// Prisma Schema for Mini ERP + CRM Operations Portal
+// ===================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  SALES
+  WAREHOUSE
+  ACCOUNTS
+}
+
+enum CustomerType {
+  RETAIL
+  WHOLESALE
+  DISTRIBUTOR
+}
+
+enum CustomerStatus {
+  LEAD
+  ACTIVE
+  INACTIVE
+}
+
+enum MovementType {
+  IN
+  OUT
+}
+
+enum ChallanStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+// ─── Users ──────────────────────────────────────────
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  role         UserRole @default(SALES)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  createdCustomers Customer[]      @relation("CustomerCreatedBy")
+  followUps        FollowUp[]      @relation("FollowUpCreatedBy")
+  stockMovements   StockMovement[] @relation("StockMovementCreatedBy")
+  challans         Challan[]       @relation("ChallanCreatedBy")
+
+  @@map("users")
+}
+
+// ─── Customers ──────────────────────────────────────
+
+model Customer {
+  id           Int            @id @default(autoincrement())
+  name         String         @db.VarChar(100)
+  mobile       String         @db.VarChar(20)
+  email        String?        @db.VarChar(255)
+  businessName String?        @map("business_name") @db.VarChar(200)
+  gstNumber    String?        @map("gst_number") @db.VarChar(20)
+  customerType CustomerType   @default(RETAIL) @map("customer_type")
+  address      String?        @db.Text
+  status       CustomerStatus @default(LEAD)
+  followUpDate DateTime?      @map("follow_up_date")
+  notes        String?        @db.Text
+  createdById  Int            @map("created_by")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  createdBy User       @relation("CustomerCreatedBy", fields: [createdById], references: [id])
+  followUps FollowUp[]
+  challans  Challan[]
+
+  @@map("customers")
+}
+
+// ─── Follow-ups ─────────────────────────────────────
+
+model FollowUp {
+  id           Int      @id @default(autoincrement())
+  customerId   Int      @map("customer_id")
+  notes        String   @db.Text
+  followUpDate DateTime @map("follow_up_date")
+  completed    Boolean  @default(false)
+  createdById  Int      @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  customer  Customer @relation(fields: [customerId], references: [id])
+  createdBy User     @relation("FollowUpCreatedBy", fields: [createdById], references: [id])
+
+  @@map("follow_ups")
+}
+
+// ─── Products ───────────────────────────────────────
+
+model Product {
+  id                Int      @id @default(autoincrement())
+  name              String   @db.VarChar(200)
+  sku               String   @unique @db.VarChar(50)
+  category          String   @db.VarChar(100)
+  unitPrice         Decimal  @map("unit_price") @db.Decimal(10, 2)
+  currentStock      Int      @default(0) @map("current_stock")
+  minStockQuantity  Int      @default(0) @map("min_stock_quantity")
+  warehouseLocation String?  @map("warehouse_location") @db.VarChar(100)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  stockMovements StockMovement[]
+  challanItems   ChallanItem[]
+
+  @@map("products")
+}
+
+// ─── Stock Movements ────────────────────────────────
+
+model StockMovement {
+  id           Int          @id @default(autoincrement())
+  productId    Int          @map("product_id")
+  quantity     Int
+  movementType MovementType @map("movement_type")
+  reason       String       @db.VarChar(255)
+  createdById  Int          @map("created_by")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  // Relations
+  product   Product @relation(fields: [productId], references: [id])
+  createdBy User    @relation("StockMovementCreatedBy", fields: [createdById], references: [id])
+
+  @@map("stock_movements")
+}
+
+// ─── Challans ───────────────────────────────────────
+
+model Challan {
+  id            Int           @id @default(autoincrement())
+  challanNumber String        @unique @map("challan_number") @db.VarChar(30)
+  customerId    Int           @map("customer_id")
+  totalQuantity Int           @default(0) @map("total_quantity")
+  status        ChallanStatus @default(DRAFT)
+  createdById   Int           @map("created_by")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  customer  Customer      @relation(fields: [customerId], references: [id])
+  createdBy User          @relation("ChallanCreatedBy", fields: [createdById], references: [id])
+  items     ChallanItem[]
+
+  @@map("challans")
+}
+
+// ─── Challan Items ──────────────────────────────────
+// Stores product snapshot info so historical data is preserved
+// even if the product name, SKU, or price changes later.
+
+model ChallanItem {
+  id          Int     @id @default(autoincrement())
+  challanId   Int     @map("challan_id")
+  productId   Int     @map("product_id")
+  productName String  @map("product_name") @db.VarChar(200)
+  productSku  String  @map("product_sku") @db.VarChar(50)
+  unitPrice   Decimal @map("unit_price") @db.Decimal(10, 2)
+  quantity    Int
+
+  // Relations
+  challan Challan @relation(fields: [challanId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("challan_items")
+}
