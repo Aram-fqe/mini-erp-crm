@@ -1,31 +1,35 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+import app from './app';
+import { env } from './config/env';
+import prisma from './db/prisma';
+import { logger } from './utils/logger';
 
-// Load environment variables
-dotenv.config();
+const startServer = async () => {
+  try {
+    // 1. Validate Database Connection (Fail fast)
+    logger.info('Connecting to the database...');
+    await prisma.$connect();
+    logger.info('Database connected successfully.');
 
-const app = express();
-const PORT = process.env.PORT || 3001;
+    // 2. Start Express Server
+    const PORT = env.port;
+    app.listen(PORT, () => {
+      logger.info(`[server] Running on http://localhost:${PORT}`);
+      logger.info(`[server] Environment: ${env.nodeEnv}`);
+    });
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+  } catch (error) {
+    logger.error('Failed to start the application due to a database connection error:', error);
+    // Ensure Prisma disconnects and process exits with error code
+    await prisma.$disconnect();
+    process.exit(1); 
+  }
+};
 
-// Health-check endpoint
-app.get('/api/health', (_req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'API is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-  });
+startServer();
+
+// Handle graceful shutdown
+process.on('SIGINT', async () => {
+  await prisma.$disconnect();
+  logger.info('Database connection closed due to app termination');
+  process.exit(0);
 });
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`[server] Running on http://localhost:${PORT}`);
-  console.log(`[server] Environment: ${process.env.NODE_ENV || 'development'}`);
-});
-
-export default app;
