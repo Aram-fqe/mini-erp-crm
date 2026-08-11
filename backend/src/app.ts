@@ -5,6 +5,7 @@ import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
 import customerRoutes from './routes/customer.routes';
 import productRoutes from './routes/product.routes';
+import challanRoutes from './routes/challan.routes';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -24,6 +25,7 @@ app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/challans', challanRoutes);
 
 // Catch-all 404 handler
 app.use(notFoundHandler);
