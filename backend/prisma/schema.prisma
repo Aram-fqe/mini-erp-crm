@@ -100,7 +100,7 @@ model FollowUp {
   createdAt    DateTime @default(now()) @map("created_at")
 
   // Relations
-  customer  Customer @relation(fields: [customerId], references: [id])
+  customer  Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   createdBy User     @relation("FollowUpCreatedBy", fields: [createdById], references: [id])
 
   @@map("follow_ups")
@@ -158,7 +158,7 @@ model Challan {
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  customer  Customer      @relation(fields: [customerId], references: [id])
+  customer  Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
   createdBy User          @relation("ChallanCreatedBy", fields: [createdById], references: [id])
   items     ChallanItem[]
 

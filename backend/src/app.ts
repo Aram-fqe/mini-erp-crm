@@ -3,6 +3,7 @@ import cors from 'cors';
 import { notFoundHandler, globalErrorHandler } from './middleware/errorHandler';
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
+import customerRoutes from './routes/customer.routes';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -20,6 +21,7 @@ app.use(express.json());
 // Routes
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/customers', customerRoutes);
 
 // Catch-all 404 handler
 app.use(notFoundHandler);
