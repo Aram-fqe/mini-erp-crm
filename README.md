@@ -6,28 +6,39 @@ A full-stack operations portal built as a developer case study, demonstrating ER
 
 | Layer          | Technology                        |
 | -------------- | --------------------------------- |
-| Frontend       | React + TypeScript (Vite)         |
-| Styling        | Tailwind CSS                      |
+| Frontend       | React 19 + TypeScript (Vite)      |
+| Styling        | Tailwind CSS v4                   |
 | Backend        | Node.js + TypeScript + Express.js |
 | Database       | PostgreSQL                        |
 | ORM            | Prisma                            |
 | Authentication | JWT & bcrypt                      |
 | API Style      | REST                              |
+| Containerization | Docker & Docker Compose         |
+| CI/CD          | GitHub Actions                    |
+| PDF Engine     | PDFKit                            |
+| Cloud Storage  | AWS S3 (via `@aws-sdk/client-s3`) |
 
 ## Project Structure
 
 ```
 mini-erp-crm/
-├── backend/          # Express.js API server
-│   ├── prisma/       # Database schema and seed scripts
-│   ├── src/          # Controllers, Services, Repositories, Routes
-│   ├── .env.example  # Environment variable template
+├── .github/
+│   └── workflows/
+│       ├── ci.yml            # CI workflow: verifies TypeScript builds
+│       └── deploy.yml        # CD workflow: builds & pushes Docker image to GHCR
+├── backend/                  # Express.js API server
+│   ├── prisma/               # Database schema and seed scripts
+│   ├── src/                  # Controllers, Services, Repositories, Routes, Utils
+│   ├── .env.example          # Environment variable template
 │   ├── package.json
 │   └── tsconfig.json
-├── frontend/         # React SPA
-│   ├── src/          # Components, Pages, API integrations
+├── frontend/                 # React SPA
+│   ├── src/                  # Components, Pages, API integrations, Context
 │   ├── package.json
 │   └── tsconfig.json
+├── Dockerfile                # Multi-stage Docker production image
+├── docker-compose.yml        # Docker Compose configuration (PostgreSQL + App)
+├── .dockerignore
 └── README.md
 ```
 
@@ -44,34 +55,58 @@ mini-erp-crm/
    - Follow-up Notes system integrated into Customer details.
 
 3. **Product and Inventory Module**
-   - Manage products (Safety Equipment, Electronics, Lighting, etc.) with SKU, categories, and min stock alerts.
-   - Stock Movement log (IN/OUT) tracking quantity changes, reasons, and timestamps.
+   - Manage products with SKU, categories, warehouse locations, and low stock alerts.
+   - Stock Movement log (IN/OUT) tracking quantity changes, reasons, and user timestamps.
 
-4. **Sales Challan Module**
+4. **Sales Delivery Challan Module**
    - Generate DRAFT or CONFIRMED Delivery Challans.
    - Multi-product line items with stock validations (prevents negative stock).
    - Confirmed challans automatically deduct stock from inventory and record movements.
 
-5. **Clean REST APIs**
-   - Separated by concerns (`/auth`, `/customers`, `/products`, `/challans`).
-   - Uses layered architecture (Router -> Controller -> Service -> Repository).
-   - Strong input validation, proper HTTP codes, unified error handler, and pagination metadata.
+5. **Bonus Features Implemented**
+   - 🐳 **Docker Setup**: Production multi-stage `Dockerfile` and `docker-compose.yml` (PostgreSQL + App).
+   - ⚙️ **GitHub Actions CI/CD**: Automatic build verification on PRs (`ci.yml`) and container deployment to GitHub Container Registry (`deploy.yml`).
+   - 📄 **PDF Invoice Export**: Generate and stream PDF invoices directly from delivery challans using PDFKit.
+   - ☁️ **AWS S3 Image Upload**: Upload product image assets to AWS S3 using Multer & AWS SDK v3 with thumbnail preview in product catalog.
 
-## Local Server Setup & Installation
+---
+
+## Production Deployment & Docker Setup
+
+### Option 1: One-Command Run via Docker Compose (Recommended)
+
+1. Clone the repository:
+   ```bash
+   git clone <repo-url>
+   cd mini-erp-crm
+   ```
+
+2. Start the full application stack (PostgreSQL + Web App):
+   ```bash
+   docker-compose up --build -d
+   ```
+   The application will be accessible at **http://localhost:3001**.
+
+3. Seed initial test data (Optional):
+   ```bash
+   docker-compose exec app npm run prisma:seed
+   ```
+
+4. Stop the stack:
+   ```bash
+   docker-compose down
+   ```
+
+---
+
+## Local Development Setup
 
 ### Prerequisites
 - Node.js >= 18
 - npm >= 9
 - PostgreSQL >= 14 (Running locally on default port 5432)
 
-### 1. Clone the Repository
-```bash
-git clone <repo-url>
-cd mini-erp-crm
-```
-
-### 2. Environment Variables
-You must set up `.env` files for both the frontend and backend.
+### 1. Environment Variables
 
 **Backend (`backend/.env`)**
 ```env
@@ -80,67 +115,54 @@ NODE_ENV=development
 DATABASE_URL=postgresql://postgres:your_password_here@localhost:5432/mini_erp_crm?schema=public
 JWT_SECRET=change_this_to_a_random_secret
 JWT_EXPIRES_IN=24h
+CORS_ORIGIN=*
+
+# AWS S3 (Optional for product image uploads)
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=your-s3-bucket-name
+AWS_ACCESS_KEY_ID=your-aws-access-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret-key
 ```
-*Note: Update `your_password_here` with your local Postgres password.*
 
 **Frontend (`frontend/.env`)**
 ```env
 VITE_API_BASE_URL=http://localhost:3001/api
 ```
 
-### 3. Database & Backend Setup
+### 2. Database & Backend Setup
 ```bash
 cd backend
 npm install
 npx prisma db push
-npm run prisma:seed   # Seeds the database with Admin user and realistic test data
+npm run prisma:seed   # Seeds the database with Admin user and test data
 npm run dev
 ```
-The API server will start at **http://localhost:3001**.
+API server running at **http://localhost:3001**.
 
-### 4. Frontend Setup
+### 3. Frontend Setup
 In a new terminal:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-The frontend will start at **http://localhost:5173**. 
-You can log in using `admin@minierp.com` with password `Password123!` (or the default test accounts).
+Frontend running at **http://localhost:5173**.
 
-## Deployment Instructions
+---
 
-This project is configured to be easily deployed on free tier platforms like Vercel (Frontend) and Render (Backend/Database).
+## Verification & Build Commands
 
-### Step 1: Database Deployment (Render / Neon / Supabase)
-1. Create a free PostgreSQL database on Render or Neon.tech.
-2. Copy the provided connection string (e.g., `postgresql://...`).
+Before deploying to production, run verification builds:
 
-### Step 2: Backend Deployment (Render)
-1. Create a new "Web Service" on Render.
-2. Connect your GitHub repository.
-3. Set the Root Directory to `backend`.
-4. Build Command: `npm install && npm run build`
-5. Start Command: `npm start`
-6. **Environment Variables**:
-   - `DATABASE_URL`: (Paste your DB connection string here)
-   - `JWT_SECRET`: (Generate a secure random string)
-   - `NODE_ENV`: `production`
-7. Once deployed, Render will provide a URL (e.g., `https://mini-erp-api.onrender.com`).
+```bash
+# Backend TypeScript check & build
+cd backend && npm run build
 
-### Step 3: Frontend Deployment (Vercel / Netlify)
-1. Create a new Project on Vercel and import your repository.
-2. Set the Framework Preset to `Vite`.
-3. Set the Root Directory to `frontend`.
-4. Build Command: `npm run build`
-5. Output Directory: `dist`
-6. **Environment Variables**:
-   - `VITE_API_BASE_URL`: (Paste your Render Backend URL here, e.g., `https://mini-erp-api.onrender.com/api`)
-7. Click Deploy.
+# Frontend Vite build check
+cd frontend && npm run build
+```
 
-## Assumptions Made
+Default login credentials (after running seed):
+- **Email**: `admin@minierp.com`
+- **Password**: `Password123!`
 
-- **Authentication**: A single `users` table manages all staff. For simplicity, users can be generated via a `/register` endpoint or seeded manually.
-- **Stock Movement**: Challan creation directly acts on stock levels. When a Challan is created and immediately set to `CONFIRMED`, it will instantly check for adequate stock and deduct it. Draft challans do not hold inventory.
-- **Architecture**: A Monorepo structure is utilized for developer convenience. `pg` raw SQL was swapped out for **Prisma ORM** for better type-safety, rapid development, and cleaner repository patterns.
-- **Frontend State**: React Context API is used for global auth state instead of complex stores like Redux, matching the scale of the application perfectly.

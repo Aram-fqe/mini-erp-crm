@@ -64,5 +64,5 @@ COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 ENV NODE_ENV=production
 EXPOSE 3001
 
-# Run migrations then start the server
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+# Run DB push then start the server
+CMD ["sh", "-c", "npx prisma db push && node dist/index.js"]

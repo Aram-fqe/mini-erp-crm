@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { notFoundHandler, globalErrorHandler } from './middleware/errorHandler';
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
@@ -42,7 +43,14 @@ app.use('/api/challans', challanRoutes);
 
 // In production, serve the built React frontend as static files
 if (env.nodeEnv === 'production') {
-  const frontendDist = path.join(__dirname, '..', '..', 'frontend', 'dist');
+  const possiblePaths = [
+    path.join(__dirname, '..', 'frontend', 'dist'),
+    path.join(__dirname, '..', '..', 'frontend', 'dist'),
+    path.join(process.cwd(), 'frontend', 'dist'),
+  ];
+
+  const frontendDist = possiblePaths.find((p) => fs.existsSync(path.join(p, 'index.html'))) || possiblePaths[0];
+
   app.use(express.static(frontendDist));
 
   // SPA catch-all: for any non-API route, serve index.html
