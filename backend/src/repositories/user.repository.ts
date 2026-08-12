@@ -1,4 +1,5 @@
 import prisma from '../db/prisma';
+import { UserRole } from '@prisma/client';
 
 export const findUserByEmail = async (email: string) => {
   return prisma.user.findUnique({
@@ -16,6 +17,17 @@ export const findUserById = async (id: number) => {
       role: true,
       createdAt: true,
       updatedAt: true,
+    },
+  });
+};
+
+export const createUser = async (data: { name: string; email: string; passwordHash: string; role?: UserRole }) => {
+  return prisma.user.create({
+    data: {
+      name: data.name,
+      email: data.email.toLowerCase().trim(),
+      passwordHash: data.passwordHash,
+      role: data.role || 'SALES',
     },
   });
 };

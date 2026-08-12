@@ -18,6 +18,7 @@ export const ChallansPage: React.FC = () => {
 
   // Modal State for New Challan DRAFT
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalLoading, setIsModalLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState('');
@@ -53,7 +54,12 @@ export const ChallansPage: React.FC = () => {
 
   const handleOpenCreateModal = async () => {
     setFormError('');
+    setCustomers([]);
+    setProducts([]);
+    setSelectedCustomer('');
+    setItems([{ productId: 0, quantity: 1 }]);
     setIsModalOpen(true);
+    setIsModalLoading(true);
     try {
       const [cRes, pRes] = await Promise.all([
         customerApi.getCustomers({ limit: 100 }),
@@ -66,7 +72,9 @@ export const ChallansPage: React.FC = () => {
         setItems([{ productId: pRes.products[0].id, quantity: 1 }]);
       }
     } catch (err) {
-      setFormError('Failed to load customers and products list.');
+      setFormError('Failed to load customers and products. Please refresh and try again.');
+    } finally {
+      setIsModalLoading(false);
     }
   };
 
@@ -237,44 +245,51 @@ export const ChallansPage: React.FC = () => {
 
       {/* Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create DRAFT Delivery Challan">
-        <form onSubmit={handleFormSubmit} className="space-y-4 text-xs">
-          {formError && (
-            <div className="flex items-center gap-2 rounded-xl bg-rose-500/10 border border-rose-500/20 p-3 text-rose-400">
-              <AlertCircle className="h-4 w-4" />
-              {formError}
-            </div>
-          )}
-
-          <div>
-            <label className="block text-[#9aa0ac] mb-1 font-semibold">Select Customer *</label>
-            <select
-              value={selectedCustomer}
-              onChange={(e) => setSelectedCustomer(e.target.value)}
-              className="w-full rounded-xl bg-[#0f1117] border border-[#2a2e3a] p-2.5 text-white focus:border-[#6c63ff]"
-            >
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} {c.businessName ? `(${c.businessName})` : ''}
-                </option>
-              ))}
-            </select>
+        {isModalLoading ? (
+          <div className="py-8">
+            <LoadingSpinner message="Loading customers and products..." />
           </div>
+        ) : (
+          <form onSubmit={handleFormSubmit} className="space-y-4 text-xs">
+            {formError && (
+              <div className="flex items-center gap-2 rounded-xl bg-rose-500/10 border border-rose-500/20 p-3 text-rose-400">
+                <AlertCircle className="h-4 w-4" />
+                {formError}
+              </div>
+            )}
 
-          <div className="space-y-2">
-            <label className="block text-[#9aa0ac] font-semibold">Challan Line Items *</label>
-            {items.map((item, idx) => (
-              <div key={idx} className="flex gap-2 items-center">
-                <select
-                  value={item.productId}
-                  onChange={(e) => handleItemChange(idx, 'productId', parseInt(e.target.value, 10))}
-                  className="flex-1 rounded-xl bg-[#0f1117] border border-[#2a2e3a] p-2 text-white"
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.sku}) — Avail: {p.currentStock}
-                    </option>
-                  ))}
-                </select>
+            <div>
+              <label className="block text-[#9aa0ac] mb-1 font-semibold">Select Customer *</label>
+              <select
+                value={selectedCustomer}
+                onChange={(e) => setSelectedCustomer(e.target.value)}
+                className="w-full rounded-xl bg-[#0f1117] border border-[#2a2e3a] p-2.5 text-white focus:border-[#6c63ff]"
+              >
+                <option value="" disabled>-- Select Customer --</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.businessName ? `(${c.businessName})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-[#9aa0ac] font-semibold">Challan Line Items *</label>
+              {items.map((item, idx) => (
+                <div key={idx} className="flex gap-2 items-center">
+                  <select
+                    value={item.productId}
+                    onChange={(e) => handleItemChange(idx, 'productId', parseInt(e.target.value, 10))}
+                    className="flex-1 rounded-xl bg-[#0f1117] border border-[#2a2e3a] p-2 text-white"
+                  >
+                    <option value={0} disabled>-- Select Product --</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.sku}) — Avail: {p.currentStock}
+                      </option>
+                    ))}
+                  </select>
 
                 <input
                   type="number"
@@ -320,7 +335,8 @@ export const ChallansPage: React.FC = () => {
               Issue DRAFT Challan
             </button>
           </div>
-        </form>
+          </form>
+        )}
       </Modal>
     </div>
   );

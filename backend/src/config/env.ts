@@ -8,6 +8,7 @@ interface Config {
   databaseUrl: string;
   jwtSecret: string;
   jwtExpiresIn: string;
+  corsOrigin: string;
 }
 
 const getConfig = (): Config => {
@@ -17,6 +18,7 @@ const getConfig = (): Config => {
     DATABASE_URL,
     JWT_SECRET,
     JWT_EXPIRES_IN,
+    CORS_ORIGIN,
   } = process.env;
 
   if (!DATABASE_URL) {
@@ -33,6 +35,7 @@ const getConfig = (): Config => {
     databaseUrl: DATABASE_URL,
     jwtSecret: JWT_SECRET,
     jwtExpiresIn: JWT_EXPIRES_IN || '24h',
+    corsOrigin: CORS_ORIGIN || '*',
   };
 };
 
