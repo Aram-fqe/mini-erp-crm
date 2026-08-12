@@ -130,6 +130,20 @@ export const productApi = {
     );
     return res.data.data.movements;
   },
+  uploadImage: async (id: number, file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await apiClient.post<{
+      success: boolean;
+      message: string;
+      data: { product: Product };
+    }>(`/products/${id}/image`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data;
+  },
 };
 
 // Challan API Services
@@ -168,5 +182,20 @@ export const challanApi = {
       `/challans/${id}/cancel`
     );
     return res.data;
+  },
+  downloadPdf: async (id: number) => {
+    const res = await apiClient.get(`/challans/${id}/pdf`, {
+      responseType: 'blob',
+    });
+    // Create a temporary object URL and trigger a download
+    const blob = new Blob([res.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `challan-${id}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   },
 };

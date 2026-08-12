@@ -110,6 +110,18 @@ export const updateProductInDb = async (id: number, data: UpdateProductDTO) => {
   };
 };
 
+export const updateProductImageUrlInDb = async (id: number, imageUrl: string) => {
+  const product = await prisma.product.update({
+    where: { id },
+    data: { imageUrl },
+  });
+  return {
+    ...product,
+    unitPrice: Number(product.unitPrice),
+    isLowStock: product.currentStock <= product.minStockQuantity,
+  };
+};
+
 export const adjustStockInDb = async (
   productId: number,
   quantity: number,

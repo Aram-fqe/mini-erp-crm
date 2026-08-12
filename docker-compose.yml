@@ -1,0 +1,55 @@
+# ============================================
+# Mini ERP + CRM — Docker Compose
+# ============================================
+# Usage:
+#   docker-compose up --build        (first run / after code changes)
+#   docker-compose up -d             (detached mode)
+#   docker-compose down              (stop everything)
+#   docker-compose exec app npx prisma db seed   (seed data)
+
+services:
+  # ── PostgreSQL Database ─────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: erp_user
+      POSTGRES_PASSWORD: erp_password
+      POSTGRES_DB: mini_erp_crm
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erp_user -d mini_erp_crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Application (Backend + Frontend) ────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://erp_user:erp_password@db:5432/mini_erp_crm?schema=public
+      JWT_SECRET: docker-compose-jwt-secret-change-in-production
+      JWT_EXPIRES_IN: 24h
+      CORS_ORIGIN: "*"
+      # Optional AWS S3 Configuration (uncomment and fill for image uploads)
+      # AWS_REGION: ap-south-1
+      # AWS_S3_BUCKET: your-bucket-name
+      # AWS_ACCESS_KEY_ID: your-access-key
+      # AWS_SECRET_ACCESS_KEY: your-secret-key
+
+volumes:
+  pgdata:
+    driver: local

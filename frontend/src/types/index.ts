@@ -49,6 +49,7 @@ export interface Product {
   currentStock: number;
   minStockQuantity: number;
   warehouseLocation?: string;
+  imageUrl?: string;
   isLowStock: boolean;
   createdAt: string;
   _count?: { stockMovements: number };

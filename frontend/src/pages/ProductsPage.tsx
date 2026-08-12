@@ -3,7 +3,7 @@ import { productApi } from '../api/services';
 import { Product } from '../types';
 import { LoadingSpinner, Badge, Modal } from '../components/UIComponents';
 import { useAuth } from '../context/AuthContext';
-import { Search, Plus, Edit, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Edit, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 
 export const ProductsPage: React.FC = () => {
   const { user } = useAuth();
@@ -20,6 +20,8 @@ export const ProductsPage: React.FC = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
@@ -63,6 +65,7 @@ export const ProductsPage: React.FC = () => {
 
   const handleOpenCreateModal = () => {
     setEditingProduct(null);
+    setSelectedFile(null);
     setFormData({
       name: '',
       sku: '',
@@ -78,6 +81,7 @@ export const ProductsPage: React.FC = () => {
 
   const handleOpenEditModal = (prod: Product) => {
     setEditingProduct(prod);
+    setSelectedFile(null);
     setFormData({
       name: prod.name,
       sku: prod.sku,
@@ -94,17 +98,20 @@ export const ProductsPage: React.FC = () => {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
+    setUploadingImage(true);
     try {
+      let savedProduct: Product;
       if (editingProduct) {
-        await productApi.updateProduct(editingProduct.id, {
+        const res = await productApi.updateProduct(editingProduct.id, {
           name: formData.name,
           category: formData.category,
           unitPrice: parseFloat(formData.unitPrice),
           minStockQuantity: parseInt(formData.minStockQuantity, 10),
           warehouseLocation: formData.warehouseLocation,
         });
+        savedProduct = res.data.product;
       } else {
-        await productApi.createProduct({
+        const res = await productApi.createProduct({
           name: formData.name,
           sku: formData.sku,
           category: formData.category,
@@ -113,11 +120,19 @@ export const ProductsPage: React.FC = () => {
           minStockQuantity: parseInt(formData.minStockQuantity, 10),
           warehouseLocation: formData.warehouseLocation,
         });
+        savedProduct = res.data.product;
       }
+
+      if (selectedFile) {
+        await productApi.uploadImage(savedProduct.id, selectedFile);
+      }
+
       setIsModalOpen(false);
       fetchProducts();
     } catch (err: any) {
       setFormError(err.response?.data?.message || 'Failed to save product record.');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -191,6 +206,7 @@ export const ProductsPage: React.FC = () => {
             <table className="w-full text-left text-xs text-[#e8eaed]">
               <thead className="bg-[#0f1117] text-[#9aa0ac] uppercase tracking-wider font-semibold">
                 <tr>
+                  <th className="p-4">Image</th>
                   <th className="p-4">SKU</th>
                   <th className="p-4">Product Name</th>
                   <th className="p-4">Category</th>
@@ -203,6 +219,19 @@ export const ProductsPage: React.FC = () => {
               <tbody className="divide-y divide-[#2a2e3a]">
                 {products.map((prod) => (
                   <tr key={prod.id} className="hover:bg-[#22262f]/50 transition">
+                    <td className="p-4">
+                      {prod.imageUrl ? (
+                        <img
+                          src={prod.imageUrl}
+                          alt={prod.name}
+                          className="h-10 w-10 rounded-lg object-cover border border-[#2a2e3a]"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg bg-[#0f1117] border border-[#2a2e3a] flex items-center justify-center text-[#9aa0ac]">
+                          <ImageIcon className="h-4 w-4" />
+                        </div>
+                      )}
+                    </td>
                     <td className="p-4 font-mono font-bold text-[#6c63ff]">{prod.sku}</td>
                     <td className="p-4 font-semibold text-white">{prod.name}</td>
                     <td className="p-4">{prod.category}</td>
@@ -357,6 +386,29 @@ export const ProductsPage: React.FC = () => {
             />
           </div>
 
+          <div>
+            <label className="block text-[#9aa0ac] mb-1 font-semibold">Product Image (AWS S3)</label>
+            <div className="flex items-center gap-3">
+              {editingProduct?.imageUrl && !selectedFile && (
+                <img
+                  src={editingProduct.imageUrl}
+                  alt="Current Product"
+                  className="h-12 w-12 rounded-xl object-cover border border-[#2a2e3a]"
+                />
+              )}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setSelectedFile(e.target.files[0]);
+                  }
+                }}
+                className="w-full rounded-xl bg-[#0f1117] border border-[#2a2e3a] p-2 text-xs text-[#9aa0ac] file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#22262f] file:text-white hover:file:bg-[#2a2e3a]"
+              />
+            </div>
+          </div>
+
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
@@ -367,9 +419,10 @@ export const ProductsPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-[#6c63ff] px-5 py-2 font-semibold text-white hover:bg-[#5a52e0]"
+              disabled={uploadingImage}
+              className="rounded-xl bg-[#6c63ff] px-5 py-2 font-semibold text-white hover:bg-[#5a52e0] disabled:opacity-50"
             >
-              {editingProduct ? 'Save Product' : 'Add to Catalog'}
+              {uploadingImage ? 'Saving...' : editingProduct ? 'Save Product' : 'Add to Catalog'}
             </button>
           </div>
         </form>

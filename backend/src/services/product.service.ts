@@ -7,7 +7,9 @@ import {
   adjustStockInDb,
   findStockMovementsByProductIdInDb,
   getDistinctCategoriesInDb,
+  updateProductImageUrlInDb,
 } from '../repositories/product.repository';
+import { uploadToS3 } from './s3.service';
 import {
   validateCreateProduct,
   validateUpdateProduct,
@@ -116,3 +118,20 @@ export const getStockMovementsService = async (productId: number) => {
 export const getCategoriesService = async () => {
   return getDistinctCategoriesInDb();
 };
+
+export const uploadProductImageService = async (productId: number, file: Express.Multer.File) => {
+  if (isNaN(productId)) {
+    throw new ApiError(400, 'Invalid product ID');
+  }
+
+  if (!file) {
+    throw new ApiError(400, 'No image file uploaded');
+  }
+
+  await getProductByIdService(productId);
+
+  const imageUrl = await uploadToS3(file, productId);
+
+  return updateProductImageUrlInDb(productId, imageUrl);
+};
+

@@ -7,10 +7,12 @@ import {
   adjustStockController,
   getStockMovementsController,
   getCategoriesController,
+  uploadProductImageController,
 } from '../controllers/product.controller';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
+import { uploadSingleImage } from '../middleware/upload.middleware';
 import { UserRole } from '@prisma/client';
 
 const router = Router();
@@ -46,6 +48,14 @@ router.post(
   '/:id/stock',
   requireRole(UserRole.ADMIN, UserRole.WAREHOUSE),
   asyncHandler(adjustStockController)
+);
+
+// POST /api/products/:id/image — Upload product image to S3 (ADMIN, WAREHOUSE)
+router.post(
+  '/:id/image',
+  requireRole(UserRole.ADMIN, UserRole.WAREHOUSE),
+  uploadSingleImage,
+  asyncHandler(uploadProductImageController)
 );
 
 // GET /api/products/:id/stock-movements — Stock movement history

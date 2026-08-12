@@ -6,6 +6,7 @@ import {
   confirmChallanController,
   cancelChallanController,
 } from '../controllers/challan.controller';
+import { downloadChallanPdfController } from '../controllers/challan-pdf.controller';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
@@ -18,6 +19,9 @@ router.use(authenticate);
 
 // GET /api/challans — List challans (ADMIN, SALES, WAREHOUSE, ACCOUNTS)
 router.get('/', asyncHandler(getChallansController));
+
+// GET /api/challans/:id/pdf — Download challan as PDF invoice (all authenticated users)
+router.get('/:id/pdf', asyncHandler(downloadChallanPdfController));
 
 // GET /api/challans/:id — Get details of a single challan
 router.get('/:id', asyncHandler(getChallanByIdController));

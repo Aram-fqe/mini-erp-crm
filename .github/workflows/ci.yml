@@ -1,0 +1,54 @@
+# ============================================
+# CI Pipeline — Build Verification
+# ============================================
+# Runs on every push to main and on pull requests.
+# Verifies that both backend and frontend compile
+# without TypeScript errors.
+
+name: CI — Build & Verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-verify:
+    name: Build & Verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      # ── Backend ──────────────────────────────
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Build backend (TypeScript)
+        working-directory: backend
+        run: npx tsc --noEmit
+
+      # ── Frontend ─────────────────────────────
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend (Vite)
+        working-directory: frontend
+        run: npm run build

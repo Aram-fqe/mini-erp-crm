@@ -9,6 +9,10 @@ interface Config {
   jwtSecret: string;
   jwtExpiresIn: string;
   corsOrigin: string;
+  awsRegion?: string;
+  awsBucket?: string;
+  awsAccessKeyId?: string;
+  awsSecretAccessKey?: string;
 }
 
 const getConfig = (): Config => {
@@ -19,6 +23,10 @@ const getConfig = (): Config => {
     JWT_SECRET,
     JWT_EXPIRES_IN,
     CORS_ORIGIN,
+    AWS_REGION,
+    AWS_S3_BUCKET,
+    AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY,
   } = process.env;
 
   if (!DATABASE_URL) {
@@ -36,6 +44,10 @@ const getConfig = (): Config => {
     jwtSecret: JWT_SECRET,
     jwtExpiresIn: JWT_EXPIRES_IN || '24h',
     corsOrigin: CORS_ORIGIN || '*',
+    awsRegion: AWS_REGION,
+    awsBucket: AWS_S3_BUCKET,
+    awsAccessKeyId: AWS_ACCESS_KEY_ID,
+    awsSecretAccessKey: AWS_SECRET_ACCESS_KEY,
   };
 };
 

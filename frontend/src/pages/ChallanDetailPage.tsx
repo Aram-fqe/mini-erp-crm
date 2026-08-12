@@ -4,7 +4,7 @@ import { challanApi } from '../api/services';
 import { Challan } from '../types';
 import { LoadingSpinner, Badge } from '../components/UIComponents';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle2, XCircle, FileText, Calendar, UserCheck, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, FileText, Calendar, UserCheck, AlertCircle, Download } from 'lucide-react';
 
 export const ChallanDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +15,7 @@ export const ChallanDetailPage: React.FC = () => {
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const canConfirm = user?.role === 'ADMIN' || user?.role === 'SALES' || user?.role === 'WAREHOUSE';
   const canCancel = user?.role === 'ADMIN' || user?.role === 'SALES';
@@ -72,6 +73,18 @@ export const ChallanDetailPage: React.FC = () => {
       setActionError(err.response?.data?.message || 'Failed to cancel challan.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!challan) return;
+    setPdfLoading(true);
+    try {
+      await challanApi.downloadPdf(challan.id);
+    } catch (err: any) {
+      setActionError(err.response?.data?.message || 'Failed to generate PDF.');
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -138,6 +151,14 @@ export const ChallanDetailPage: React.FC = () => {
 
           {/* Workflow Action Buttons */}
           <div className="flex gap-2">
+            <button
+              disabled={pdfLoading}
+              onClick={handleDownloadPdf}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#6c63ff] px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-[#6c63ff]/20 hover:bg-[#5a52e0] disabled:opacity-50 transition"
+            >
+              <Download className="h-4 w-4" /> {pdfLoading ? 'Generating...' : 'Download PDF'}
+            </button>
+
             {challan.status === 'DRAFT' && canConfirm && (
               <button
                 disabled={actionLoading}

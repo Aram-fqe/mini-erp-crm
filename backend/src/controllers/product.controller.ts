@@ -7,6 +7,7 @@ import {
   adjustStockService,
   getStockMovementsService,
   getCategoriesService,
+  uploadProductImageService,
 } from '../services/product.service';
 
 export const createProductController = async (req: Request, res: Response) => {
@@ -75,3 +76,15 @@ export const getCategoriesController = async (_req: Request, res: Response) => {
     data: { categories },
   });
 };
+
+export const uploadProductImageController = async (req: Request, res: Response) => {
+  const idStr = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const productId = parseInt(idStr, 10);
+  const product = await uploadProductImageService(productId, req.file!);
+  res.status(200).json({
+    success: true,
+    message: 'Product image uploaded successfully to AWS S3',
+    data: { product },
+  });
+};
+
